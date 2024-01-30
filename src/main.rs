@@ -1,7 +1,21 @@
 use std::{
     io::{Read, Write},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
 };
+
+fn handle(mut stream: TcpStream) {
+    loop {
+        let mut buffer = [0u8; 100];
+        if let Ok(bytes_read) = stream.read(&mut buffer) {
+            println!("{:?}", std::str::from_utf8(&buffer[..bytes_read]));
+            if stream.write("+PONG\r\n".as_bytes()).is_err() {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+}
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -10,14 +24,11 @@ fn main() {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(mut stream) => {
+            Ok(stream) => {
                 println!("accepted new connection");
-                let mut buffer = [0u8; 100];
-                let bytes_read = stream.read(&mut buffer).unwrap();
-                println!("{:?}", std::str::from_utf8(&buffer[..bytes_read]));
-                stream.write_all("+PONG\r\n".as_bytes()).unwrap();
-                stream.write_all("+PONG\r\n".as_bytes()).unwrap();
+                handle(stream)
             }
+
             Err(e) => {
                 println!("error: {}", e);
             }
