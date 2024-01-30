@@ -3,6 +3,8 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
+mod pool;
+
 fn handle(mut stream: TcpStream) {
     loop {
         let mut buffer = [0u8; 100];
@@ -18,7 +20,7 @@ fn handle(mut stream: TcpStream) {
 }
 
 fn main() {
-    println!("Logs from your program will appear here!");
+    let pool = pool::ThreadPool::build(4);
 
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
 
@@ -26,7 +28,7 @@ fn main() {
         match stream {
             Ok(stream) => {
                 println!("accepted new connection");
-                handle(stream)
+                pool.submit(|| handle(stream));
             }
 
             Err(e) => {
