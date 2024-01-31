@@ -10,14 +10,15 @@ mod resp;
 fn handle(mut stream: TcpStream) -> Result<(), &'static str> {
     loop {
         let mut buffer = [0u8; 100];
-        if let Ok(bytes_read) = stream.read(&mut buffer) {
-            let payload = &buffer[..bytes_read];
-            let array = resp::Array::from_client_bytes(payload)?;
-            let bulkstring = resp::BulkString::from_array(&array)?;
-            let cmd = commands::Command::from_bulk_string(&bulkstring)?;
-            stream.write_all(cmd.respond().as_bytes()).unwrap();
-        } else {
-            break;
+        match stream.read(&mut buffer) {
+            Ok(bytes_read) if bytes_read > 0 => {
+                let payload = &buffer[..bytes_read];
+                let array = resp::Array::from_client_bytes(payload)?;
+                let bulkstring = resp::BulkString::from_array(&array)?;
+                let cmd = commands::Command::from_bulk_string(&bulkstring)?;
+                stream.write_all(cmd.respond().as_bytes()).unwrap();
+            }
+            _ => break,
         }
     }
     Ok(())

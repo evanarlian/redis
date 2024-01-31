@@ -22,7 +22,7 @@ impl<'a> Array<'a> {
         }
         // now we have: *2 $4 ECHO $3 hey ""
         let array_len = splitted[0][1..].parse::<usize>().unwrap();
-        if buffer.len() != array_len * 2 + 2 {
+        if splitted.len() != array_len * 2 + 2 {
             return Err("array length is does not match content");
         }
         // trim the last unused "" because of splitting

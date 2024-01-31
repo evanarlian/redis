@@ -8,6 +8,7 @@ impl<'a> Command<'a> {
     pub fn from_bulk_string(bs: &'a resp::BulkString) -> Result<Command<'a>, &'static str> {
         let cmd_name = bs.content()[0].to_lowercase();
         let cmd = match &cmd_name[..] {
+            "ping" => Command::Ping,
             "echo" => Command::Echo(Echo::from_bulk_string(bs)?),
             _ => Err("unsupported command")?,
         };
