@@ -3,20 +3,24 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
+mod commands;
 mod pool;
+mod resp;
 
-fn handle(mut stream: TcpStream) {
+fn handle(mut stream: TcpStream) -> Result<(), &'static str> {
     loop {
         let mut buffer = [0u8; 100];
         if let Ok(bytes_read) = stream.read(&mut buffer) {
-            println!("{:?}", std::str::from_utf8(&buffer[..bytes_read]));
-            if stream.write("+PONG\r\n".as_bytes()).is_err() {
-                break;
-            }
+            let payload = &buffer[..bytes_read];
+            let array = resp::Array::from_client_bytes(payload)?;
+            let bulkstring = resp::BulkString::from_array(&array)?;
+            let cmd = commands::Command::from_bulk_string(&bulkstring)?;
+            stream.write_all(cmd.respond().as_bytes()).unwrap();
         } else {
             break;
         }
     }
+    Ok(())
 }
 
 fn main() {
@@ -28,7 +32,9 @@ fn main() {
         match stream {
             Ok(stream) => {
                 println!("accepted new connection");
-                pool.submit(|| handle(stream));
+                pool.submit(|| {
+                    handle(stream).unwrap();
+                });
             }
 
             Err(e) => {

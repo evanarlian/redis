@@ -2,7 +2,8 @@ use std::{
     sync::{
         mpsc::{self, Receiver, Sender},
         Arc, Mutex,
-    }, thread::{self, JoinHandle}, time::Duration
+    },
+    thread::{self, JoinHandle},
 };
 
 struct Worker {
