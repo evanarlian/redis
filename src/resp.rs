@@ -5,8 +5,8 @@ trait RespIO {
     fn to_output(&self) -> String;
 }
 enum Resp<'a> {
-    SimpleString(SimpleString),
-    SimpleError(SimpleError),
+    SimpleString(SimpleString<'a>),
+    SimpleError(SimpleError<'a>),
     Integer(Integer),
     BulkString(BulkString<'a>),
     Array(Array<'a>),
@@ -14,8 +14,8 @@ enum Resp<'a> {
     Boolean(Boolean),
     Double(Double),
     BigNumber(BigNumber),
-    BulkError(BulkError),
-    VerbatimString(VerbatimString),
+    BulkError(BulkError<'a>),
+    VerbatimString(VerbatimString<'a>),
     Map(Map),
     Set(Set),
     Push(Push),
@@ -41,7 +41,7 @@ impl<'a> Resp<'a> {
     }
 }
 impl<'a> RespIO for Resp<'a> {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, & str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         let first_byte = buf
             .first()
             .ok_or("argument length is zero")?
@@ -86,9 +86,10 @@ impl<'a> RespIO for Resp<'a> {
     }
 }
 
-struct SimpleString;
-impl RespIO for SimpleString {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+struct SimpleString<'a>(&'a str);
+impl<'a> RespIO for SimpleString<'a> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
+        // must not contain \r and or \n
         todo!()
     }
     fn to_output(&self) -> String {
@@ -96,9 +97,9 @@ impl RespIO for SimpleString {
     }
 }
 
-struct SimpleError;
-impl RespIO for SimpleError {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+struct SimpleError<'a>(&'a str);
+impl<'a> RespIO for SimpleError<'a> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -106,9 +107,9 @@ impl RespIO for SimpleError {
     }
 }
 
-struct Integer;
+struct Integer(i64);
 impl RespIO for Integer {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -116,6 +117,8 @@ impl RespIO for Integer {
     }
 }
 
+
+// TODO turns out implementation of Bulk String is just String
 pub struct BulkString<'a>(Vec<&'a str>);
 impl<'a> RespIO for BulkString<'a> {
     fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
@@ -127,6 +130,7 @@ impl<'a> RespIO for BulkString<'a> {
 }
 
 impl<'a> BulkString<'a> {
+    // TODO NUKE
     pub fn from_array(array: &'a Array) -> Result<BulkString<'a>, &'static str> {
         let content = array.content();
         let mut bulk_strings = vec![];
@@ -157,6 +161,7 @@ impl<'a> RespIO for Array<'a> {
 }
 
 impl<'a> Array<'a> {
+    // TODO move to standalone function
     pub fn from_client_bytes(buffer: &[u8]) -> Result<Array, &'static str> {
         // wild assumption: all inputs must be valid string
         let splitted = std::str::from_utf8(buffer)
@@ -188,7 +193,7 @@ impl<'a> Array<'a> {
 
 struct Null;
 impl RespIO for Null {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -196,9 +201,9 @@ impl RespIO for Null {
     }
 }
 
-struct Boolean;
+struct Boolean(bool);
 impl RespIO for Boolean {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -206,9 +211,9 @@ impl RespIO for Boolean {
     }
 }
 
-struct Double;
+struct Double(f64);
 impl RespIO for Double {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -218,7 +223,8 @@ impl RespIO for Double {
 
 struct BigNumber;
 impl RespIO for BigNumber {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
+        // TODO this is hard
         todo!()
     }
     fn to_output(&self) -> String {
@@ -226,9 +232,9 @@ impl RespIO for BigNumber {
     }
 }
 
-struct BulkError;
-impl RespIO for BulkError {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+struct BulkError<'a>(&'a str);
+impl<'a> RespIO for BulkError<'a> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -236,9 +242,10 @@ impl RespIO for BulkError {
     }
 }
 
-struct VerbatimString;
-impl RespIO for VerbatimString {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+struct VerbatimString<'a>(&'a str);
+impl <'a>RespIO for VerbatimString<'a> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
+        // TODO this is super complex, idk what to use for the encoding
         todo!()
     }
     fn to_output(&self) -> String {
@@ -248,7 +255,7 @@ impl RespIO for VerbatimString {
 
 struct Map;
 impl RespIO for Map {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -258,7 +265,7 @@ impl RespIO for Map {
 
 struct Set;
 impl RespIO for Set {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
@@ -268,10 +275,12 @@ impl RespIO for Set {
 
 struct Push;
 impl RespIO for Push {
-    fn to_resp<'a>(buf: Vec<&'a str>) -> Result<Resp<'a>, &'static str> {
+    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
         todo!()
     }
     fn to_output(&self) -> String {
         todo!()
     }
 }
+
+// NOTE: Map, Set, Array can contain Any Resp type?? can it be nested? i think only for simple data types
