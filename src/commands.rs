@@ -17,7 +17,10 @@ impl<'a> Command<'a> {
     pub fn respond(&self) -> String {
         match self {
             Command::Ping => String::from("+PONG\r\n"),
-            Command::Echo(Echo(echo)) => echo.to_string(),
+            Command::Echo(Echo(echo)) => {
+                // actually a bulk string
+                format!("${}\r\n{}\r\n", echo.len(), echo).to_string()
+            }
         }
     }
 }
