@@ -16,7 +16,7 @@ impl<'a> Command<'a> {
     }
     pub fn respond(&self) -> String {
         match self {
-            Command::Ping => String::from("PONG"),
+            Command::Ping => String::from("+PONG\r\n"),
             Command::Echo(Echo(echo)) => echo.to_string(),
         }
     }
