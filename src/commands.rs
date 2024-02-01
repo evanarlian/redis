@@ -1,37 +1,24 @@
-use super::resp;
+use super::resp::dtypes::{Resp, SimpleString, BulkString};
 
-pub enum Command<'a> {
-    Ping,
-    Echo(Echo<'a>),
-}
-impl<'a> Command<'a> {
-    pub fn from_bulk_string(bs: &'a resp::BulkString) -> Result<Command<'a>, &'static str> {
-        let cmd_name = bs.content()[0].to_lowercase();
-        let cmd = match &cmd_name[..] {
-            "ping" => Command::Ping,
-            "echo" => Command::Echo(Echo::from_bulk_string(bs)?),
-            _ => Err("unsupported command")?,
-        };
-        Ok(cmd)
-    }
-    pub fn respond(&self) -> String {
-        match self {
-            Command::Ping => String::from("+PONG\r\n"),
-            Command::Echo(Echo(echo)) => {
-                // actually a bulk string
-                format!("${}\r\n{}\r\n", echo.len(), echo).to_string()
-            }
-        }
-    }
-}
+// trait Command {
+//     fn respond() -> Resp<'a>;
+// }
+// pub enum Cmd<'a> {
+//     Ping,
+//     Echo(Echo<'a>),
+// }
 
-struct Echo<'a>(&'a str);
-impl<'a> Echo<'a> {
-    fn from_bulk_string(bs: &'a resp::BulkString) -> Result<Echo<'a>, &'static str> {
-        let content = bs.content();
-        if bs.content().len() != 2 {
-            return Err("wrong ECHO parameter count");
-        }
-        Ok(Echo(content[1]))
-    }
-}
+// struct Ping;
+// impl Command for Ping {
+//     fn respond<'a>() -> Resp<'a> {
+//         Resp::SimpleString(SimpleString("PONG"))
+//     }
+// }
+
+
+// struct Echo<'a>(&'a str);
+// impl <'a>Command for Echo<'a> {
+//     fn respond() -> Resp<'a> {
+//         Resp::SimpleString(SimpleString("PONG"))
+//     }
+// }
