@@ -11,6 +11,7 @@ pub enum Resp {
     SimpleString(SimpleString),
     SimpleError(SimpleError),
     BulkString(BulkString),
+    Null(Null),
     Integer(Integer),
 }
 impl Resp {
@@ -19,6 +20,7 @@ impl Resp {
             Resp::SimpleString(inner) => inner.to_output(),
             Resp::SimpleError(inner) => inner.to_output(),
             Resp::BulkString(inner) => inner.to_output(),
+            Resp::Null(inner) => inner.to_output(),
             Resp::Integer(inner) => inner.to_output(),
         }
     }
@@ -28,7 +30,7 @@ pub struct SimpleString(pub String);
 impl RespValue for SimpleString {
     const FIRST_BYTE: char = '+';
     fn to_output(&self) -> String {
-        format!("{}{}{CRLF}", SimpleString::FIRST_BYTE, self.0)
+        format!("{}{}{CRLF}", Self::FIRST_BYTE, self.0)
     }
 }
 
@@ -36,7 +38,7 @@ pub struct SimpleError(pub String);
 impl RespValue for SimpleError {
     const FIRST_BYTE: char = '-';
     fn to_output(&self) -> String {
-        format!("{}{}{CRLF}", SimpleError::FIRST_BYTE, self.0)
+        format!("{}{}{CRLF}", Self::FIRST_BYTE, self.0)
     }
 }
 
@@ -44,12 +46,7 @@ pub struct BulkString(pub String);
 impl RespValue for BulkString {
     const FIRST_BYTE: char = '$';
     fn to_output(&self) -> String {
-        format!(
-            "{}{}{CRLF}{}{CRLF}",
-            BulkString::FIRST_BYTE,
-            self.0.len(),
-            self.0
-        )
+        format!("{}{}{CRLF}{}{CRLF}", Self::FIRST_BYTE, self.0.len(), self.0)
     }
 }
 impl BulkString {
@@ -84,10 +81,18 @@ impl BulkString {
     }
 }
 
+pub struct Null;
+impl RespValue for Null {
+    const FIRST_BYTE: char = '_';
+    fn to_output(&self) -> String {
+        format!("{}{CRLF}", Self::FIRST_BYTE)
+    }
+}
+
 struct Integer(pub i64);
 impl RespValue for Integer {
     const FIRST_BYTE: char = ':';
     fn to_output(&self) -> String {
-        format!("{}{}{CRLF}", BulkString::FIRST_BYTE, self.0)
+        format!("{}{}{CRLF}", Self::FIRST_BYTE, self.0)
     }
 }
