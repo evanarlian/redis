@@ -30,15 +30,14 @@ impl Worker {
     }
 }
 
-pub struct ThreadPool<F> {
-    tx: Sender<F>,
+type Job = Box<dyn FnOnce() + Send + 'static>;
+
+pub struct ThreadPool {
+    tx: Sender<Job>,
     workers: Vec<Worker>,
 }
-impl<F> ThreadPool<F>
-where
-    F: FnOnce() + Send + 'static,
-{
-    pub fn build(num_workers: usize) -> ThreadPool<F> {
+impl ThreadPool {
+    pub fn build(num_workers: usize) -> ThreadPool {
         let (tx, rx) = mpsc::channel();
         let rx = Arc::new(Mutex::new(rx));
         let mut workers = vec![];
@@ -48,7 +47,10 @@ where
         ThreadPool { tx, workers }
     }
 
-    pub fn submit(&self, job: F) {
-        self.tx.send(job).unwrap();
+    pub fn submit<F>(&self, job: F)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.tx.send(Box::new(job)).unwrap();
     }
 }
