@@ -20,7 +20,7 @@ impl Resp {
     //         Resp::Integer(_) => Integer::FIRST_BYTE,
     //     }
     // }
-    fn to_output(&self) -> String {
+    pub fn to_output(&self) -> String {
         match self {
             Resp::SimpleString(inner) => inner.to_output(),
             Resp::BulkString(inner) => inner.to_output(),

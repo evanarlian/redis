@@ -13,14 +13,10 @@ fn handle(mut stream: TcpStream) -> Result<(), &'static str> {
         match stream.read(&mut buffer) {
             Ok(bytes_read) if bytes_read > 0 => {
                 let payload = &buffer[..bytes_read];
-                let array = resp::array::parse_client_bytes(payload)?;
-                // let cmd = commands::Command::from_bulk_string(&)?;
-                let response = match &array[0].0.to_lowercase()[..] {
-                    "ping" => "+PONG\r\n".to_owned(),
-                    "echo" => format!("+{}\r\n", array[1].0),
-                    _ => unreachable!(),
-                };
-                stream.write_all(response.as_bytes()).unwrap();
+                let mut array = resp::array::parse_client_bytes(payload)?.into_iter();
+                let cmd = commands::Cmd::from_bulk_strings(&mut array)?;
+                let resp_out = cmd.respond();
+                stream.write_all(resp_out.to_output().as_bytes()).unwrap();
             }
             _ => break,
         }
