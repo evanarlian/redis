@@ -13,12 +13,7 @@ enum Resp<'a> {
     Null(Null),
     Boolean(Boolean),
     Double(Double),
-    BigNumber(BigNumber),
     BulkError(BulkError<'a>),
-    VerbatimString(VerbatimString<'a>),
-    Map(Map),
-    Set(Set),
-    Push(Push),
 }
 impl<'a> Resp<'a> {
     fn first_byte(&self) -> char {
@@ -31,12 +26,7 @@ impl<'a> Resp<'a> {
             Resp::Null(_) => '_',
             Resp::Boolean(_) => '#',
             Resp::Double(_) => ',',
-            Resp::BigNumber(_) => '(',
             Resp::BulkError(_) => '!',
-            Resp::VerbatimString(_) => '=',
-            Resp::Map(_) => '%',
-            Resp::Set(_) => '~',
-            Resp::Push(_) => '>',
         }
     }
 }
@@ -57,12 +47,7 @@ impl<'a> RespIO for Resp<'a> {
             '_' => Null::to_resp(buf),
             '#' => Boolean::to_resp(buf),
             ',' => Double::to_resp(buf),
-            '(' => BigNumber::to_resp(buf),
             '!' => BulkError::to_resp(buf),
-            '=' => VerbatimString::to_resp(buf),
-            '%' => Map::to_resp(buf),
-            '~' => Set::to_resp(buf),
-            '>' => Push::to_resp(buf),
             _ => Err("first byte is not recognized"),
         }
     }
@@ -76,12 +61,7 @@ impl<'a> RespIO for Resp<'a> {
             Resp::Null(_) => todo!(),
             Resp::Boolean(_) => todo!(),
             Resp::Double(_) => todo!(),
-            Resp::BigNumber(_) => todo!(),
             Resp::BulkError(_) => todo!(),
-            Resp::VerbatimString(_) => todo!(),
-            Resp::Map(_) => todo!(),
-            Resp::Set(_) => todo!(),
-            Resp::Push(_) => todo!(),
         }
     }
 }
@@ -221,17 +201,6 @@ impl RespIO for Double {
     }
 }
 
-struct BigNumber;
-impl RespIO for BigNumber {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
-        // TODO this is hard
-        todo!()
-    }
-    fn to_output(&self) -> String {
-        todo!()
-    }
-}
-
 struct BulkError<'a>(&'a str);
 impl<'a> RespIO for BulkError<'a> {
     fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
@@ -242,45 +211,5 @@ impl<'a> RespIO for BulkError<'a> {
     }
 }
 
-struct VerbatimString<'a>(&'a str);
-impl <'a>RespIO for VerbatimString<'a> {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
-        // TODO this is super complex, idk what to use for the encoding
-        todo!()
-    }
-    fn to_output(&self) -> String {
-        todo!()
-    }
-}
-
-struct Map;
-impl RespIO for Map {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
-        todo!()
-    }
-    fn to_output(&self) -> String {
-        todo!()
-    }
-}
-
-struct Set;
-impl RespIO for Set {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
-        todo!()
-    }
-    fn to_output(&self) -> String {
-        todo!()
-    }
-}
-
-struct Push;
-impl RespIO for Push {
-    fn to_resp(buf: Vec<&str>) -> Result<Resp, &str> {
-        todo!()
-    }
-    fn to_output(&self) -> String {
-        todo!()
-    }
-}
-
-// NOTE: Map, Set, Array can contain Any Resp type?? can it be nested? i think only for simple data types
+// NOTE: the one thing that i am super confused with: client will always send array of bul string right? then when is other type used? is this the job of the client based on data types passed in? 
+// For example SET num 1 in redis-cli is always string. But in python client MAYBE the set is sensitive to data type, e.g. isinstance(input, int), etc
