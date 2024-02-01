@@ -7,21 +7,35 @@ mod commands;
 mod pool;
 mod resp;
 
-fn handle(mut stream: TcpStream) -> Result<(), &'static str> {
+use resp::dtypes::{RespValue, SimpleError};
+
+fn handle(mut stream: TcpStream) {
     loop {
+        // TODO super bad code i think, need some cool buffer tricks
         let mut buffer = [0u8; 100];
         match stream.read(&mut buffer) {
             Ok(bytes_read) if bytes_read > 0 => {
                 let payload = &buffer[..bytes_read];
-                let mut array = resp::array::parse_client_bytes(payload)?.into_iter();
-                let cmd = commands::Cmd::from_bulk_strings(&mut array)?;
+                let mut it = match resp::array::parse_client_bytes(payload) {
+                    Ok(array) => array.into_iter(),
+                    Err(e) => {
+                        stream.write_all(e.to_output().as_bytes()).unwrap();
+                        continue;
+                    }
+                };
+                let cmd = match commands::Cmd::from_bulk_strings(&mut it) {
+                    Ok(cmd) => cmd,
+                    Err(e) => {
+                        stream.write_all(e.to_output().as_bytes()).unwrap();
+                        continue;
+                    }
+                };
                 let resp_out = cmd.respond();
                 stream.write_all(resp_out.to_output().as_bytes()).unwrap();
             }
             _ => break,
         }
     }
-    Ok(())
 }
 
 fn main() {
@@ -34,7 +48,7 @@ fn main() {
             Ok(stream) => {
                 println!("accepted new connection");
                 pool.submit(|| {
-                    handle(stream).unwrap();
+                    handle(stream);
                 });
             }
 

@@ -1,4 +1,4 @@
-use super::resp::dtypes::{BulkString, Resp, SimpleString};
+use super::resp::dtypes::{BulkString, Resp, SimpleError, SimpleString};
 
 trait Command {
     fn respond(self) -> Resp;
@@ -8,16 +8,16 @@ pub enum Cmd {
     Echo(Echo),
 }
 impl Cmd {
-    pub fn from_bulk_strings<T>(it: &mut T) -> Result<Cmd, &'static str>
+    pub fn from_bulk_strings<T>(it: &mut T) -> Result<Cmd, SimpleError>
     where
         T: Iterator<Item = BulkString>,
     {
-        let cmd_str = it.next().ok_or("command is empty")?;
+        let cmd_str = it.next().ok_or(SimpleError("command is empty".into()))?;
         match &cmd_str.0.to_lowercase()[..] {
-            // TODO ping can be with 1 param, todo use option
+            // TODO ping can be with 1 param, use option
             "ping" => Ok(Cmd::Ping(Ping)),
             "echo" => Ok(Cmd::Echo(Echo::from_iter(it)?)),
-            _ => Err("command not found"),
+            other => Err(SimpleError(format!("ERR command '{other}' not found"))),
         }
     }
     pub fn respond(self) -> Resp {
@@ -42,11 +42,13 @@ impl Command for Echo {
     }
 }
 impl Echo {
-    fn from_iter<T>(it: &mut T) -> Result<Self, &'static str>
+    fn from_iter<T>(it: &mut T) -> Result<Self, SimpleError>
     where
         T: Iterator<Item = BulkString>,
     {
-        let param = it.next().ok_or("echo param not found")?;
+        let param = it
+            .next()
+            .ok_or(SimpleError("echo param not found".into()))?;
         Ok(Echo(param.0))
     }
 }
