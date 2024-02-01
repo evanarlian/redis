@@ -1,6 +1,6 @@
 use super::dtypes::BulkString;
 
-type ClientArray<'a> = Vec<BulkString<'a>>;
+type ClientArray = Vec<BulkString>;
 
 fn to_valid_slices(buffer: &[u8]) -> Result<Vec<&str>, &'static str> {
     // wild assumption: all inputs must be valid string
@@ -12,7 +12,7 @@ fn to_valid_slices(buffer: &[u8]) -> Result<Vec<&str>, &'static str> {
         .first()
         .ok_or("args length is zero")?
         .chars()
-        .nth(0)
+        .next()
         .ok_or("array first byte cannot be found")?;
     if first_byte != '*' {
         return Err("input is not valid redis Array type");
@@ -25,6 +25,7 @@ fn to_valid_slices(buffer: &[u8]) -> Result<Vec<&str>, &'static str> {
     // trim the last unused "" because of splitting
     Ok(splitted[1..splitted.len() - 1].to_vec())
 }
+
 pub fn parse_client_bytes(buffer: &[u8]) -> Result<ClientArray, &'static str> {
     let mut splitted = to_valid_slices(buffer)?.into_iter();
     let mut bulk_strings = vec![];

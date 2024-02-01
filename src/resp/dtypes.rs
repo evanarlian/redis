@@ -7,12 +7,12 @@ trait RespValue {
     fn to_output(&self) -> String;
 }
 
-pub enum Resp<'a> {
-    SimpleString(SimpleString<'a>),
-    BulkString(BulkString<'a>),
+pub enum Resp {
+    SimpleString(SimpleString),
+    BulkString(BulkString),
     Integer(Integer),
 }
-impl<'a> Resp<'a> {
+impl Resp {
     // fn first_byte(&self) -> char {
     //     match self {
     //         Resp::SimpleString(_) => SimpleString::FIRST_BYTE,
@@ -29,16 +29,16 @@ impl<'a> Resp<'a> {
     }
 }
 
-pub struct SimpleString<'a>(pub &'a str);
-impl<'a> RespValue for SimpleString<'a> {
+pub struct SimpleString(pub String);
+impl RespValue for SimpleString {
     const FIRST_BYTE: char = '+';
     fn to_output(&self) -> String {
         format!("{}{}{CRLF}", SimpleString::FIRST_BYTE, self.0)
     }
 }
 
-pub struct BulkString<'a>(pub &'a str);
-impl<'a> RespValue for BulkString<'a> {
+pub struct BulkString(pub String);
+impl RespValue for BulkString {
     const FIRST_BYTE: char = '$';
     fn to_output(&self) -> String {
         format!(
@@ -49,8 +49,10 @@ impl<'a> RespValue for BulkString<'a> {
         )
     }
 }
-impl<'a> BulkString<'a> {
-    pub fn from_bytes_iter<T: Iterator<Item = &'a str>>(it: &mut T) -> Result<Self, &'static str> {
+impl BulkString {
+    pub fn from_bytes_iter<'a, T: Iterator<Item = &'a str>>(
+        it: &mut T,
+    ) -> Result<Self, &'static str> {
         let bs_len = it.next().ok_or("require 2 args for bulk string")?;
         let bs_str = it.next().ok_or("require 2 args for bulk string")?;
         if bs_len.chars().nth(0).ok_or("cannot access first byte")? != Self::FIRST_BYTE {
@@ -62,7 +64,7 @@ impl<'a> BulkString<'a> {
         if bs_len != bs_str.len() {
             return Err("bulk string length is not the same as the bulk string");
         }
-        Ok(Self(bs_str))
+        Ok(Self(bs_str.to_owned()))
     }
 }
 
