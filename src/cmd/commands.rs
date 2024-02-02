@@ -1,14 +1,11 @@
 use std::time::{Duration, SystemTime};
 
-use crate::server::RedisValue;
-
 use super::parser::OptionalArgs;
-use super::resp::dtypes::{BulkString, Null, Resp, SimpleError, SimpleString};
-use super::server::Database;
+use crate::resp::database::Database;
+use crate::resp::database::RedisValue;
+use crate::resp::dtypes::{BulkString, Null, Resp, SimpleError, SimpleString};
 
 trait Run {
-    // for potentially write actions, can return error
-    // example: GET command is mutable, because it might expire the key
     fn run(self, db: Database) -> Result<Resp, SimpleError>;
 }
 pub enum Cmd {
@@ -165,5 +162,4 @@ impl Get {
     }
 }
 // TODO should i use Self or Set? Standardize!
-// TODO change respond to run and runmut?
 // TODO fix naming from errors, super bad lol, eg key param not found, well on what?>
