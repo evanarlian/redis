@@ -136,7 +136,7 @@ impl Run for Get {
                 content,
                 expiry: Some(expiry),
             }) => {
-                // active eviction:
+                // passive eviction:
                 // (expiry)   (now)  ->  if expiry is in the past (elapsed exist), delete and return null
                 // (now)   (expiry)  ->  if expiry is in the future (elapsed error), keep and return key
                 if expiry.elapsed().is_ok() {
