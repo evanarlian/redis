@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::time::SystemTime;
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
@@ -12,7 +13,13 @@ use super::pool;
 use super::resp;
 use super::resp::dtypes::RespValue;
 
-pub type Database = Arc<RwLock<HashMap<String, String>>>;
+// TODO where to put this? maybe in anotger file from resp module?
+pub struct RedisValue {
+    pub content: String,
+    pub expiry: Option<SystemTime>
+}
+
+pub type Database = Arc<RwLock<HashMap<String, RedisValue>>>;
 
 pub struct RedisServer {
     pool: ThreadPool,
@@ -85,5 +92,3 @@ impl RedisServer {
         }
     }
 }
-
-fn main() {}

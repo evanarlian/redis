@@ -1,6 +1,9 @@
-use crate::resp::dtypes::Null;
+use std::time::{Duration, SystemTime};
 
-use super::resp::dtypes::{BulkString, Resp, SimpleError, SimpleString};
+use crate::server::RedisValue;
+
+use super::parser::OptionalArgs;
+use super::resp::dtypes::{BulkString, Null, Resp, SimpleError, SimpleString};
 use super::server::Database;
 
 trait Run {
@@ -67,11 +70,18 @@ impl Echo {
 struct Set {
     key: String,
     value: String,
+    expiry: Option<SystemTime>,
 }
 impl Run for Set {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
         let mut map = db.write().unwrap();
-        map.insert(self.key, self.value);
+        map.insert(
+            self.key,
+            RedisValue {
+                content: self.value,
+                expiry: self.expiry,
+            },
+        );
         Ok(Resp::SimpleString(SimpleString("OK".into())))
     }
 }
@@ -84,19 +94,63 @@ impl Set {
         let value = it
             .next()
             .ok_or(SimpleError("value param not found".into()))?;
+        // parse and handle optional arguments
+        let mut args = OptionalArgs::new(&["px", "ex"], &[]);
+        args.insert_from_iter(&mut it.map(|x| x.0))
+            .map_err(|x| SimpleError(format!("SET param {x} is unknown")))?;
+        let millis = match (args.args.get("px").unwrap(), args.args.get("ex").unwrap()) {
+            (Some(_px), Some(_ex)) => Err(SimpleError("PX and EX are mutually exclusive".into()))?,
+            (Some(px), None) => Some(
+                px.parse::<u64>()
+                    .map_err(|_| SimpleError("PX cannot be parsed".into()))?,
+            ),
+            (None, Some(ex)) => Some(
+                ex.parse::<u64>()
+                    .map_err(|_| SimpleError("EX cannot be parsed".into()))?
+                    .checked_mul(1000)
+                    .ok_or(SimpleError("EX overflows".into()))?,
+            ),
+            (None, None) => None,
+        };
         Ok(Set {
             key: key.0,
             value: value.0,
+            expiry: millis.map(|mi| {
+                SystemTime::now()
+                    .checked_add(Duration::from_millis(mi))
+                    .unwrap()
+            }),
         })
     }
 }
 
-struct Get(String);
+struct Get {
+    key: String,
+}
 impl Run for Get {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
-        let map = db.read().unwrap();
-        match map.get(&self.0) {
-            Some(v) => Ok(Resp::SimpleString(SimpleString(v.clone()))),
+        let mut map = db.write().unwrap();
+        match map.get(&self.key) {
+            Some(RedisValue {
+                content,
+                expiry: None,
+            }) => Ok(Resp::SimpleString(SimpleString(content.clone()))),
+            Some(RedisValue {
+                content,
+                expiry: Some(expiry),
+            }) => {
+                // active eviction:
+                // (expiry)   (now)  ->  if expiry is in the past (elapsed exist), delete and return null
+                // (now)   (expiry)  ->  if expiry is in the future (elapsed error), keep and return key
+                if expiry.elapsed().is_ok() {
+                    // evict
+                    map.remove(&self.key);
+                    Ok(Resp::Null(Null))
+                } else {
+                    // keep
+                    Ok(Resp::SimpleString(SimpleString(content.clone())))
+                }
+            }
             None => Ok(Resp::Null(Null)),
         }
     }
@@ -107,7 +161,7 @@ impl Get {
         T: Iterator<Item = BulkString>,
     {
         let key = it.next().ok_or(SimpleError("key param not found".into()))?;
-        Ok(Get(key.0))
+        Ok(Get { key: key.0 })
     }
 }
 // TODO should i use Self or Set? Standardize!

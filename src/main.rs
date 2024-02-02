@@ -2,6 +2,7 @@ mod commands;
 mod pool;
 mod resp;
 mod server;
+mod parser;
 
 use server::RedisServer;
 
