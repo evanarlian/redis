@@ -1,13 +1,13 @@
 use std::time::{Duration, SystemTime};
 
 use super::parser::OptionalArgs;
-use crate::resp::database::Database;
-use crate::resp::database::RedisValue;
+use crate::resp::database::{Database, RedisValue};
 use crate::resp::dtypes::{BulkString, Null, Resp, SimpleError, SimpleString};
 
 trait Run {
     fn run(self, db: Database) -> Result<Resp, SimpleError>;
 }
+// TODO add from_iter trait that signals this trait need to be constructed by bulkstring?
 pub enum Cmd {
     Ping(Ping),
     Echo(Echo),
@@ -161,5 +161,4 @@ impl Get {
         Ok(Get { key: key.0 })
     }
 }
-// TODO should i use Self or Set? Standardize!
-// TODO fix naming from errors, super bad lol, eg key param not found, well on what?>
+// TODO SimpleError better error message, add readable source

@@ -36,3 +36,5 @@ pub fn parse_client_bytes(buffer: &[u8]) -> Result<ClientArray, SimpleError> {
     }
     Ok(bulk_strings)
 }
+
+// TODO refactor intos, is it btter to be ::new()

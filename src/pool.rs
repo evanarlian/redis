@@ -1,17 +1,14 @@
 use std::{
-    sync::{
-        mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
-    },
-    thread::{self, JoinHandle},
+    sync::{mpsc, Arc, Mutex},
+    thread,
 };
 
 struct Worker {
     id: usize,
-    handle: JoinHandle<()>,
+    handle: thread::JoinHandle<()>,
 }
 impl Worker {
-    fn new<F>(id: usize, rx: Arc<Mutex<Receiver<F>>>) -> Worker
+    fn new<F>(id: usize, rx: Arc<Mutex<mpsc::Receiver<F>>>) -> Worker
     where
         F: FnOnce() + Send + 'static,
     {
@@ -23,7 +20,10 @@ impl Worker {
                     eprintln!("worker {} gets the job", id);
                     f();
                 }
-                Err(e) => break,
+                Err(_e) => {
+                    eprintln!("pipe closed, no more jobs, worker {} shutting down", id);
+                    break;
+                }
             };
         });
         Worker { id, handle }
@@ -33,7 +33,7 @@ impl Worker {
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPool {
-    tx: Sender<Job>,
+    tx: mpsc::Sender<Job>,
     workers: Vec<Worker>,
 }
 impl ThreadPool {

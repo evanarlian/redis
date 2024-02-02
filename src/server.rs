@@ -17,8 +17,8 @@ pub struct RedisServer {
     db: Database,
 }
 impl RedisServer {
-    pub fn new(addr: &str) -> RedisServer {
-        let pool = pool::ThreadPool::build(4);
+    pub fn new(addr: &str, num_workers: usize) -> RedisServer {
+        let pool = pool::ThreadPool::build(num_workers);
         let listener = TcpListener::bind(addr).unwrap();
         RedisServer {
             pool,
@@ -31,22 +31,19 @@ impl RedisServer {
             match stream {
                 Ok(stream) => {
                     println!("accepted new connection");
-                    self.pool.submit({
-                        let db = Arc::clone(&self.db);
-                        || {
-                            RedisServer::handle(db, stream);
-                        }
+                    let db = Arc::clone(&self.db);
+                    self.pool.submit(|| {
+                        RedisServer::handle_connection(db, stream);
                     });
                 }
-
-                Err(e) => {
-                    println!("listener error: {}", e);
-                }
+                Err(e) => println!("connection failed: {}", e),
             }
         }
     }
-    // handle is standalone function, not a method!
-    fn handle(db: Database, mut stream: TcpStream) {
+    fn handle_connection(db: Database, mut stream: TcpStream) {
+        // handle_connection is standalone function, not a method!
+        // this is to prevent moving self.method to closure
+        // this loop below is for handling multiple commands for the same connection, TODO test what is the difference between the incoming loop vs this loop?
         loop {
             // TODO super bad code i think, need some cool buffer tricks
             let mut buffer = [0u8; 100];
@@ -67,7 +64,7 @@ impl RedisServer {
                             continue;
                         }
                     };
-                    // TODO REFAC and check if the arc clone logic is correct??
+                    // TODO REFAC and check if the arc clone logic is correct?? -- tied to loop problems
                     let resp_out = match cmd.respond(Arc::clone(&db)) {
                         Ok(resp) => resp,
                         Err(e) => {

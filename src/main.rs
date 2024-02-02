@@ -6,6 +6,6 @@ mod server;
 use server::RedisServer;
 
 fn main() {
-    let server = RedisServer::new("127.0.0.1:6379");
+    let server = RedisServer::new("127.0.0.1:6379", 4);
     server.serve();
 }

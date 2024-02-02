@@ -1,5 +1,3 @@
-// https://redis.io/docs/reference/protocol-spec
-
 const CRLF: &str = "\r\n";
 
 pub trait RespValue {
@@ -7,6 +5,7 @@ pub trait RespValue {
     fn to_output(&self) -> String;
 }
 
+// https://redis.io/docs/reference/protocol-spec
 pub enum Resp {
     SimpleString(SimpleString),
     SimpleError(SimpleError),
