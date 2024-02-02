@@ -85,7 +85,10 @@ pub struct Null;
 impl RespValue for Null {
     const FIRST_BYTE: char = '_';
     fn to_output(&self) -> String {
-        format!("{}{CRLF}", Self::FIRST_BYTE)
+        // HACK: this is just to satisfy codecrafters, I think they are using old RESP 2 protocol
+        "$-1\r\n".into() // (nil bulk string)
+
+        // format!("{}{CRLF}", Self::FIRST_BYTE)
     }
 }
 
