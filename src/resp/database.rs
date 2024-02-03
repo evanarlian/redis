@@ -7,11 +7,13 @@ use std::{
 
 use rand::{rngs::ThreadRng, Rng};
 
+#[derive(Clone)]
 pub struct RedisValue {
     pub content: String,
     pub expiry: Option<SystemTime>,
 }
 
+#[derive(Clone)]
 struct Wrapper {
     r: RedisValue,
     i: usize,
@@ -104,17 +106,16 @@ impl RandomMap {
         }
     }
     fn _get(&mut self, key: &str) -> Option<Wrapper> {
-        // INTERNAL FUNCTION: THE R of CRUD
+        // THE R of CRUD
         // gets the redis value after expired key eviction
         self.evict(key);
-        todo!()
+        self.map.get(key).cloned()
     }
     pub fn set(&mut self, key: String, new_r: RedisValue) -> Option<RedisValue> {
         // THE CU of CRUD
-        // note that eviction has been handled by self._get
+        // note that eviction has been handled by self._get (hence we do not use HashMap::insert directly)
         // returns the previous value of the key, useful for cmd GETSET
         if let Some(Wrapper { r: old_r, i: old_i }) = self._get(&key) {
-            // TODO insert API does return too, check later 🔥
             // replace the just that one key of the map
             let new_w = Wrapper { r: new_r, i: old_i };
             self.map.insert(key, new_w);
