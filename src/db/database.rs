@@ -36,13 +36,18 @@ impl RandomMap {
     }
     fn reorganize_map_vec(&mut self, del_i: usize) {
         // because of o(1) random access, need to maintain both map and vec
-        // 1. swap vec[del_i] with the last element
+        // 0. special case element on the last cannot be swapped with itself
         let last_idx = self.vec.len() - 1;
+        if del_i == last_idx {
+            self.vec.pop().unwrap();
+            return;
+        }
+        // 1. swap vec[del_i] with the last element
         self.vec.swap(del_i, last_idx);
         // 2. pop last elem, guaranteed success if everything is right
-        let last_key = self.vec.pop().unwrap();
-        // 3. change the map[last_key] to point to originally deleted location
-        self.map.get_mut(&last_key).unwrap().i = del_i;
+        self.vec.pop().unwrap();
+        // 3. change the map[vec[del_i]] to point to originally deleted location
+        self.map.get_mut(&self.vec[del_i]).unwrap().i = del_i;
     }
     pub fn evict(&mut self, key: &str) -> Option<RedisValue> {
         // return true if evicted
@@ -74,9 +79,9 @@ impl RandomMap {
             }
         };
         if let Some(del_i) = maybe_del_i {
-            let evicted = self.map.remove(key);
+            let evicted = self.map.remove(key).unwrap();
             self.reorganize_map_vec(del_i);
-            Some(evicted.unwrap().r)
+            Some(evicted.r)
         } else {
             None
         }
