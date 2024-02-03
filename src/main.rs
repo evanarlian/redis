@@ -1,4 +1,5 @@
 mod cmd;
+mod db;
 mod pool;
 mod resp;
 mod server;

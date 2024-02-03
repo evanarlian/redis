@@ -1,7 +1,7 @@
 use std::time::{Duration, SystemTime};
 
 use super::parser::OptionalArgs;
-use crate::resp::database::{Database, RedisValue};
+use crate::db::{database::RedisValue, Database};
 use crate::resp::dtypes::{BulkString, Null, Resp, SimpleError, SimpleString};
 
 trait Run {
@@ -72,7 +72,7 @@ struct Set {
 impl Run for Set {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
         let mut map = db.write().unwrap();
-        map.insert(
+        map.set(
             self.key,
             RedisValue {
                 content: self.value,
@@ -128,25 +128,8 @@ impl Run for Get {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
         let mut map = db.write().unwrap();
         match map.get(&self.key) {
-            Some(RedisValue {
-                content,
-                expiry: None,
-            }) => Ok(Resp::SimpleString(SimpleString(content.clone()))),
-            Some(RedisValue {
-                content,
-                expiry: Some(expiry),
-            }) => {
-                // passive eviction:
-                // (expiry)   (now)  ->  if expiry is in the past (elapsed exist), delete and return null
-                // (now)   (expiry)  ->  if expiry is in the future (elapsed error), keep and return key
-                if expiry.elapsed().is_ok() {
-                    // evict
-                    map.remove(&self.key);
-                    Ok(Resp::Null(Null))
-                } else {
-                    // keep
-                    Ok(Resp::SimpleString(SimpleString(content.clone())))
-                }
+            Some(RedisValue { content, expiry: _ }) => {
+                Ok(Resp::SimpleString(SimpleString(content)))
             }
             None => Ok(Resp::Null(Null)),
         }

@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    sync::{Arc, RwLock},
 };
 
 use crate::cmd::commands;
+use crate::db::{database::RandomMap, Database};
 use crate::pool;
 use crate::resp;
-use crate::resp::database::Database;
 use crate::resp::dtypes::RespValue;
+// TODO ugly imports
 
 pub struct RedisServer {
     pool: pool::ThreadPool,
@@ -23,7 +23,7 @@ impl RedisServer {
         RedisServer {
             pool,
             listener,
-            db: Arc::new(RwLock::new(HashMap::new())),
+            db: Arc::new(RwLock::new(RandomMap::new())),
         }
     }
     pub fn serve(&self) {

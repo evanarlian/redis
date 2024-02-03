@@ -1,11 +1,6 @@
-// TODO this should not be coupled with resp, yank out this file later
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-    time::SystemTime,
-};
+use std::{collections::HashMap, time::SystemTime};
 
-use rand::{rngs::ThreadRng, Rng};
+use rand::Rng;
 
 #[derive(Clone)]
 pub struct RedisValue {
@@ -19,20 +14,16 @@ struct Wrapper {
     i: usize,
 }
 
-pub type Database = Arc<RwLock<HashMap<String, RedisValue>>>;
-
 // https://interviewing.io/questions/insert-delete-get-random-o-1
-struct RandomMap {
+pub struct RandomMap {
     map: HashMap<String, Wrapper>,
     vec: Vec<String>,
-    rng: ThreadRng,
 }
 impl RandomMap {
     pub fn new() -> Self {
         Self {
             vec: Vec::new(),
             map: HashMap::new(),
-            rng: rand::thread_rng(),
         }
     }
     pub fn len(&self) -> usize {
@@ -140,7 +131,7 @@ impl RandomMap {
         if self.len() == 0 {
             return None;
         }
-        let random_idx = self.rng.gen_range(0..self.len());
+        let random_idx = rand::thread_rng().gen_range(0..self.len());
         let random_key = self.vec[random_idx].clone();
         self.evict(&random_key)
     }
