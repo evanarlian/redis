@@ -131,13 +131,14 @@ impl RandomMap {
         // the sole purpose of this get is to remove internal Wrapper
         self._get(key).map(|w| w.r)
     }
-    pub fn random_evict(&mut self) -> Option<RedisValue> {
+    pub fn random_evict(&mut self) -> Option<(String, RedisValue)> {
         // also called redis active eviction
         if self.len() == 0 {
             return None;
         }
         let random_idx = rand::thread_rng().gen_range(0..self.len());
         let random_key = self.vec[random_idx].clone();
-        self.evict(&random_key)
+        // also add evicted key for extra info for caller
+        self.evict(&random_key).map(|r| (random_key, r))
     }
 }

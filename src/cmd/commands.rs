@@ -71,8 +71,8 @@ struct Set {
 }
 impl Run for Set {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
-        let mut map = db.write().unwrap();
-        map.set(
+        let mut guard = db.write().unwrap();
+        guard.set(
             self.key,
             RedisValue {
                 content: self.value,
@@ -126,8 +126,8 @@ struct Get {
 }
 impl Run for Get {
     fn run(self, db: Database) -> Result<Resp, SimpleError> {
-        let mut map = db.write().unwrap();
-        match map.get(&self.key) {
+        let mut guard = db.write().unwrap();
+        match guard.get(&self.key) {
             Some(RedisValue { content, expiry: _ }) => {
                 Ok(Resp::SimpleString(SimpleString(content)))
             }
