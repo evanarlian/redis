@@ -5,7 +5,7 @@ use std::{
     time::SystemTime,
 };
 
-use rand::rngs::ThreadRng;
+use rand::{rngs::ThreadRng, Rng};
 
 pub struct RedisValue {
     pub content: String,
@@ -26,14 +26,14 @@ struct RandomMap {
     rng: ThreadRng,
 }
 impl RandomMap {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             vec: Vec::new(),
             map: HashMap::new(),
             rng: rand::thread_rng(),
         }
     }
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         assert_eq!(
             self.map.len(),
             self.vec.len(),
@@ -51,7 +51,8 @@ impl RandomMap {
         // 3. change the map[last_key] to point to originally deleted location
         self.map.get_mut(&last_key).unwrap().i = del_i;
     }
-    pub fn evict(&mut self, key: &str) {
+    pub fn evict(&mut self, key: &str) -> Option<RedisValue> {
+        // return true if evicted
         // extract out the deleted index inside braces to satisfy borrow checker
         let maybe_del_i = {
             // if let below explained: all these must match if want to evict:
@@ -80,15 +81,20 @@ impl RandomMap {
             }
         };
         if let Some(del_i) = maybe_del_i {
-            self.map.remove(key);
+            let evicted = self.map.remove(key);
             self.reorganize_map_vec(del_i);
+            Some(evicted.unwrap().r)
+        } else {
+            None
         }
     }
     pub fn del(&mut self, key: &str) -> Option<RedisValue> {
         // THE D of CRUD
-        // note that eviction has been handled by self.evict
-        // will always remove the value, and returning previous value if exists (useful for getdel)
-        self.evict(key);
+        // delete will always remove the value, and returning previous value if exists (useful for GETDEL)
+        if self.evict(key).is_some() {
+            // there is no point in checking again, since you have just been evicting
+            return None;
+        }
         if let Some(Wrapper { r: del_r, i: del_i }) = self.map.remove(key) {
             self.reorganize_map_vec(del_i);
             Some(del_r)
@@ -107,7 +113,8 @@ impl RandomMap {
         // THE CU of CRUD
         // note that eviction has been handled by self._get
         // returns the previous value of the key, useful for cmd GETSET
-        if let Some(Wrapper { r: old_r, i: old_i }) = self._get(&key) {  // TODO insert API does return too, check later
+        if let Some(Wrapper { r: old_r, i: old_i }) = self._get(&key) {
+            // TODO insert API does return too, check later 🔥
             // replace the just that one key of the map
             let new_w = Wrapper { r: new_r, i: old_i };
             self.map.insert(key, new_w);
@@ -126,5 +133,14 @@ impl RandomMap {
     pub fn get(&mut self, key: &str) -> Option<RedisValue> {
         // the sole purpose of this get is to remove internal Wrapper
         self._get(key).map(|w| w.r)
+    }
+    pub fn random_evict(&mut self) -> Option<RedisValue> {
+        // also called redis active eviction
+        if self.len() == 0 {
+            return None;
+        }
+        let random_idx = self.rng.gen_range(0..self.len());
+        let random_key = self.vec[random_idx].clone();
+        self.evict(&random_key)
     }
 }
