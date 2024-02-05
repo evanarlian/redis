@@ -12,4 +12,3 @@ pub struct RedisArgs {
     #[arg(long, default_value = "dump.rdb")]
     pub dbfilename: PathBuf,
 }
-// TODO port might need to be a string

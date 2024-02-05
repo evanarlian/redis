@@ -54,3 +54,5 @@ impl ThreadPool {
         self.tx.send(Box::new(job)).unwrap();
     }
 }
+
+// TODO graceful shutdown

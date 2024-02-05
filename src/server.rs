@@ -7,10 +7,13 @@ use std::{
 };
 
 use crate::args::RedisArgs;
-use crate::db::{database::RandomMap, Database};
+use crate::cmd::commands;
+use crate::db::{
+    database::{RandomMap, RedisValue},
+    Database,
+};
 use crate::pool;
-use crate::resp::{dtypes::Array, dtypes::RespValue};
-use crate::{cmd::commands, db::database::RedisValue};
+use crate::resp::{Array, RespValue};
 
 pub struct RedisServer {
     pool: pool::ThreadPool,
@@ -54,7 +57,7 @@ impl RedisServer {
         // handle_connection is standalone function, not a method, to prevent moving self.method to closure
         // this loop below is for handling multiple commands for the same, one connection
         loop {
-            // TODO super bad code i think, need some cool buffer tricks
+            // TODO super bad code I think, need some cool buffer tricks
             let mut buffer = [0u8; 100];
             match stream.read(&mut buffer) {
                 Ok(bytes_read) if bytes_read > 0 => {
@@ -127,3 +130,4 @@ impl RedisServer {
         Arc::new(RwLock::new(random_map))
     }
 }
+// TODO graceful

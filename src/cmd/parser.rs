@@ -23,6 +23,7 @@ impl OptionalArgs {
         T: Iterator<Item = String>,
     {
         // try filling in from iterator, while erroring on offending key
+        #[allow(clippy::map_entry)]
         while let Some(x) = it.next() {
             let x = x.to_lowercase();
             if self.flags.contains_key(&x) {
