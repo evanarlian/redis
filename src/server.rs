@@ -9,7 +9,7 @@ use std::{
 use crate::args::RedisArgs;
 use crate::db::{database::RandomMap, Database};
 use crate::pool;
-use crate::resp::{array::parse_client_bytes, dtypes::RespValue};
+use crate::resp::{dtypes::Array, dtypes::RespValue};
 use crate::{cmd::commands, db::database::RedisValue};
 
 pub struct RedisServer {
@@ -59,21 +59,21 @@ impl RedisServer {
             match stream.read(&mut buffer) {
                 Ok(bytes_read) if bytes_read > 0 => {
                     let payload = &buffer[..bytes_read];
-                    let mut it = match parse_client_bytes(payload) {
+                    let mut it = match Array::parse_client_bytes(payload) {
                         Ok(array) => array.into_iter(),
                         Err(e) => {
                             stream.write_all(e.to_output().as_bytes()).unwrap();
                             continue;
                         }
                     };
-                    let cmd = match commands::Cmd::from_bulk_strings(&mut it) {
+                    let cmd = match commands::Cmd::from_args(&mut it) {
                         Ok(cmd) => cmd,
                         Err(e) => {
                             stream.write_all(e.to_output().as_bytes()).unwrap();
                             continue;
                         }
                     };
-                    let resp_out = match cmd.respond(Arc::clone(&db), Arc::clone(&config_db)) {
+                    let resp_out = match cmd.run(Arc::clone(&db), Arc::clone(&config_db)) {
                         Ok(resp) => resp,
                         Err(e) => {
                             stream.write_all(e.to_output().as_bytes()).unwrap();
