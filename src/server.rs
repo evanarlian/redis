@@ -6,29 +6,33 @@ use std::{
     time::Duration,
 };
 
-use crate::cmd::commands;
+use crate::args::RedisArgs;
 use crate::db::{database::RandomMap, Database};
 use crate::pool;
 use crate::resp::{array::parse_client_bytes, dtypes::RespValue};
-// TODO ugly imports
+use crate::{cmd::commands, db::database::RedisValue};
 
 pub struct RedisServer {
     pool: pool::ThreadPool,
     evictor: thread::JoinHandle<()>,
     listener: TcpListener,
     db: Database,
+    config_db: Database,
 }
 impl RedisServer {
-    pub fn new(addr: &str, num_workers: usize) -> RedisServer {
+    pub fn new(args: &RedisArgs, num_workers: usize) -> RedisServer {
+        let addr = format!("127.0.0.1:{}", args.port);
         let pool = pool::ThreadPool::build(num_workers);
         let listener = TcpListener::bind(addr).unwrap();
         let db = Arc::new(RwLock::new(RandomMap::new()));
+        let config_db = RedisServer::populate_config_db(args);
         let evictor = RedisServer::random_evict_loop(Arc::clone(&db));
         RedisServer {
             pool,
             evictor,
             listener,
             db,
+            config_db,
         }
     }
     pub fn serve(&self) {
@@ -37,15 +41,16 @@ impl RedisServer {
                 Ok(stream) => {
                     println!("accepted new connection");
                     let db = Arc::clone(&self.db);
+                    let config_db = Arc::clone(&self.config_db);
                     self.pool.submit(|| {
-                        RedisServer::handle_connection(db, stream);
+                        RedisServer::handle_connection(db, config_db, stream);
                     });
                 }
                 Err(e) => println!("connection failed: {}", e),
             }
         }
     }
-    fn handle_connection(db: Database, mut stream: TcpStream) {
+    fn handle_connection(db: Database, config_db: Database, mut stream: TcpStream) {
         // handle_connection is standalone function, not a method, to prevent moving self.method to closure
         // this loop below is for handling multiple commands for the same, one connection
         loop {
@@ -68,7 +73,7 @@ impl RedisServer {
                             continue;
                         }
                     };
-                    let resp_out = match cmd.respond(Arc::clone(&db)) {
+                    let resp_out = match cmd.respond(Arc::clone(&db), Arc::clone(&config_db)) {
                         Ok(resp) => resp,
                         Err(e) => {
                             stream.write_all(e.to_output().as_bytes()).unwrap();
@@ -91,5 +96,34 @@ impl RedisServer {
                 eprintln!("key {k} value {} was evicted", r.content)
             }
         })
+    }
+    fn populate_config_db(args: &RedisArgs) -> Database {
+        let mut random_map = RandomMap::new();
+        random_map.set(
+            "port".into(),
+            RedisValue {
+                content: args.port.to_string(),
+                expiry: None,
+            },
+        );
+        random_map.set(
+            "dir".into(),
+            RedisValue {
+                content: args.dir.to_str().expect("dir is not valid utf-8").into(),
+                expiry: None,
+            },
+        );
+        random_map.set(
+            "dbfilename".into(),
+            RedisValue {
+                content: args
+                    .dbfilename
+                    .to_str()
+                    .expect("dbfilename is not valid utf-8")
+                    .into(),
+                expiry: None,
+            },
+        );
+        Arc::new(RwLock::new(random_map))
     }
 }

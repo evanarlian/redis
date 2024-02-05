@@ -10,6 +10,7 @@ pub enum Resp {
     SimpleString(SimpleString),
     SimpleError(SimpleError),
     BulkString(BulkString),
+    Array(Array),
     Null(Null),
     Integer(Integer),
 }
@@ -19,6 +20,7 @@ impl Resp {
             Resp::SimpleString(inner) => inner.to_output(),
             Resp::SimpleError(inner) => inner.to_output(),
             Resp::BulkString(inner) => inner.to_output(),
+            Resp::Array(inner) => inner.to_output(),
             Resp::Null(inner) => inner.to_output(),
             Resp::Integer(inner) => inner.to_output(),
         }
@@ -77,6 +79,18 @@ impl BulkString {
             ));
         }
         Ok(Self(bs_str.to_owned()))
+    }
+}
+
+pub struct Array(pub Vec<Resp>);
+impl RespValue for Array {
+    const FIRST_BYTE: char = '*';
+    fn to_output(&self) -> String {
+        let mut output = format!("{}{}{CRLF}", Self::FIRST_BYTE, self.0.len());
+        for resp in &self.0 {
+            output.push_str(&resp.to_output());
+        }
+        output
     }
 }
 

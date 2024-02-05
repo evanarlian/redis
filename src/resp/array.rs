@@ -1,7 +1,7 @@
 use super::dtypes::{BulkString, SimpleError};
 
 type ClientArray = Vec<BulkString>;
-
+// TODO ight now array have its own shit, how about this
 fn to_valid_slices(buffer: &[u8]) -> Result<Vec<&str>, SimpleError> {
     // wild assumption: all inputs must be valid string
     let splitted = std::str::from_utf8(buffer)

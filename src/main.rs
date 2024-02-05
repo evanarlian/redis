@@ -1,12 +1,16 @@
+mod args;
 mod cmd;
 mod db;
 mod pool;
 mod resp;
 mod server;
 
+use clap::Parser;
 use server::RedisServer;
 
 fn main() {
-    let server = RedisServer::new("127.0.0.1:6379", 4);
+    let args = args::RedisArgs::parse();
+    println!("{:#?}", args);
+    let server = RedisServer::new(&args, 4);
     server.serve();
 }
