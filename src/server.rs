@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, RwLock},
@@ -6,14 +7,15 @@ use std::{
     time::Duration,
 };
 
-use crate::args::RedisArgs;
 use crate::cmd::commands;
 use crate::db::{
     database::{RandomMap, RedisValue},
     Database,
 };
 use crate::pool;
+use crate::rdb;
 use crate::resp::{Array, RespValue};
+use crate::{args::RedisArgs, rdb::RdbParseResult};
 
 pub struct RedisServer {
     pool: pool::ThreadPool,
@@ -27,7 +29,7 @@ impl RedisServer {
         let addr = format!("127.0.0.1:{}", args.port);
         let pool = pool::ThreadPool::build(num_workers);
         let listener = TcpListener::bind(addr).unwrap();
-        let db = Arc::new(RwLock::new(RandomMap::new()));
+        let db = RedisServer::populate_db(args);
         let config_db = RedisServer::populate_config_db(args);
         let evictor = RedisServer::random_evict_loop(Arc::clone(&db));
         RedisServer {
@@ -127,6 +129,23 @@ impl RedisServer {
                 expiry: None,
             },
         );
+        Arc::new(RwLock::new(random_map))
+    }
+    fn populate_db(args: &RedisArgs) -> Database {
+        // read file
+        let filepath = args.dir.join(args.dbfilename.clone());
+        let parsed_rdb = match fs::read(filepath) {
+            Ok(rdb_bytes) => rdb::parse_rdb(rdb_bytes),
+            Err(e) => {
+                println!("skipping restoration from rdb: {e}");
+                RdbParseResult::default()
+            }
+        };
+        // populate the database
+        let mut random_map = RandomMap::new();
+        for (k, v) in parsed_rdb.redis_map.into_iter() {
+            random_map.set(k, v);
+        }
         Arc::new(RwLock::new(random_map))
     }
 }

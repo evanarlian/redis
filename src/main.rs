@@ -2,6 +2,7 @@ mod args;
 mod cmd;
 mod db;
 mod pool;
+mod rdb;
 mod resp;
 mod server;
 
