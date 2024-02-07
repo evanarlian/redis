@@ -44,14 +44,14 @@ impl RedisServer {
         for stream in self.listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    println!("accepted new connection");
+                    eprintln!("accepted new connection");
                     let db = Arc::clone(&self.db);
                     let config_db = Arc::clone(&self.config_db);
                     self.pool.submit(|| {
                         RedisServer::handle_connection(db, config_db, stream);
                     });
                 }
-                Err(e) => println!("connection failed: {}", e),
+                Err(e) => eprintln!("connection failed: {}", e),
             }
         }
     }
@@ -137,7 +137,7 @@ impl RedisServer {
         let parsed_rdb = match fs::read(filepath) {
             Ok(rdb_bytes) => rdb::parse_rdb(rdb_bytes),
             Err(e) => {
-                println!("skipping restoration from rdb: {e}");
+                eprintln!("skipping restoration from rdb: {e}");
                 RdbParseResult::default()
             }
         };

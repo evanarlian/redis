@@ -18,6 +18,7 @@ pub enum Cmd {
     Set(Set),
     Get(Get),
     ConfigGet(ConfigGet),
+    Keys(Keys),
 }
 impl Cmd {
     pub fn from_args<T: Iterator<Item = String>>(it: &mut T) -> Result<Cmd, R::SimpleError> {
@@ -38,6 +39,7 @@ impl Cmd {
                     ))),
                 }
             }
+            "keys" => Ok(Cmd::Keys(Keys::from_args(it)?)),
             other => Err(R::SimpleError(format!("command '{other}' not found"))),
         }
     }
@@ -49,6 +51,7 @@ impl Cmd {
             Cmd::Set(inner) => inner.run(db, config_db),
             Cmd::Get(inner) => inner.run(db, config_db),
             Cmd::ConfigGet(inner) => inner.run(db, config_db),
+            Cmd::Keys(inner) => inner.run(db, config_db),
         }
     }
 }
@@ -58,9 +61,7 @@ impl Run for Ping {
     fn from_args<T: Iterator<Item = String>>(it: &mut T) -> Result<Self, R::SimpleError> {
         let (param1, param2) = (it.next(), it.next());
         match (param1, param2) {
-            (Some(_), Some(_)) => {
-                Err(R::SimpleError("PING only takes 0 or 1 arg".into()))
-            }
+            (Some(_), Some(_)) => Err(R::SimpleError("PING only takes 0 or 1 arg".into())),
             (Some(param1), None) => Ok(Ping(param1)),
             (None, Some(_)) => unreachable!(),
             (None, None) => Ok(Ping("PONG".into())),
@@ -74,9 +75,10 @@ impl Run for Ping {
 struct Echo(String);
 impl Run for Echo {
     fn from_args<T: Iterator<Item = String>>(it: &mut T) -> Result<Self, R::SimpleError> {
-        let param = it
-            .next()
-            .ok_or(R::SimpleError("ECHO param not found".into()))?;
+        let param = it.next().ok_or(R::SimpleError("ECHO takes 1 arg".into()))?;
+        if it.next().is_some() {
+            return Err(R::SimpleError("ECHO takes 1 arg".into()));
+        }
         Ok(Echo(param))
     }
     fn run(self, _: Database, _: Database) -> Result<Resp, R::SimpleError> {
@@ -185,5 +187,34 @@ impl Run for ConfigGet {
             }
         }
         Ok(Resp::Array(R::Array(array_content)))
+    }
+}
+
+struct Keys {
+    pattern: String,
+}
+impl Run for Keys {
+    fn from_args<T: Iterator<Item = String>>(it: &mut T) -> Result<Self, R::SimpleError> {
+        let pattern = it.next().ok_or(R::SimpleError("KEYS takes 1 arg".into()))?;
+        if pattern != "*" {
+            return Err(R::SimpleError(
+                "KEYS currently only support * pattern".into(),
+            ));
+        }
+        if it.next().is_some() {
+            return Err(R::SimpleError("KEYS takes 1 arg".into()));
+        }
+        Ok(Keys { pattern })
+    }
+    fn run(self, db: Database, _: Database) -> Result<Resp, R::SimpleError> {
+        let mut guard = db.write().unwrap();
+        let curr_keys = guard.maybe_expired_keys();
+        let mut valid_keys = vec![];
+        for key in curr_keys {
+            if guard.get(&key).is_some() {
+                valid_keys.push(Resp::BulkString(R::BulkString(key)));
+            }
+        }
+        Ok(Resp::Array(R::Array(valid_keys)))
     }
 }

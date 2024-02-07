@@ -131,6 +131,10 @@ impl RandomMap {
         // the sole purpose of this get is to remove internal Wrapper
         self._get(key).map(|w| w.r)
     }
+    pub fn maybe_expired_keys(&mut self) -> Vec<String> {
+        // returns all key currently in hand regardless of expiration
+        self.vec.clone()
+    }
     pub fn random_evict(&mut self) -> Option<(String, RedisValue)> {
         // also called redis active eviction
         if self.len() == 0 {

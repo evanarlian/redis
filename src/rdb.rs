@@ -112,7 +112,7 @@ pub fn parse_rdb(buf: Vec<u8>) -> RdbParseResult {
             }
             0xFE => {
                 // selectdb, idk what is this
-                println!("[rdb] 0xFE selectdb unimplemented");
+                eprintln!("[rdb] 0xFE selectdb unimplemented");
                 let _db_selection = length_decode(&mut buf);
             }
             0xFF => break,
