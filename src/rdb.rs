@@ -70,6 +70,9 @@ impl<'a> ByteWrapper<'a> {
         self.i += 1;
         self.b[old_i]
     }
+    fn peek(&self) -> u8 {
+        self.b[self.i]
+    }
 }
 
 pub fn parse_rdb(buf: &[u8]) -> RdbParseResult {
@@ -103,7 +106,9 @@ pub fn parse_rdb(buf: &[u8]) -> RdbParseResult {
                 let _db_selection = length_decode(&mut buf);
             }
             0xFF => break,
-            _ => {}
+            _ => {
+                // idk what is this empty space in new RDB format
+            }
         }
     }
     RdbParseResult {
@@ -188,8 +193,11 @@ fn parse_resizedb_and_keyvals(buf: &mut ByteWrapper, kv_map: &mut HashMap<String
     let mut keys_wo_expiry_cnt = all_keys_cnt - keys_with_expiry_cnt;
     // parse all keyvals
     for _ in 0..all_keys_cnt {
-        let expiry = match buf.one() {
+        let expiry = match buf.peek() {
+            // peek because we actually need the bytes for the last case
+            // then throw away manually for FC and FD case
             0xFC => {
+                buf.one();
                 // expiry in millisecs
                 let temp: [u8; 8] = buf.get(8).try_into().unwrap();
                 let unix_millis = u64::from_be_bytes(temp);
@@ -197,6 +205,7 @@ fn parse_resizedb_and_keyvals(buf: &mut ByteWrapper, kv_map: &mut HashMap<String
                 Some(expiry)
             }
             0xFD => {
+                buf.one();
                 // expiry in secs
                 let temp = buf.get(4).try_into().unwrap();
                 let unix_secs = u32::from_be_bytes(temp);
