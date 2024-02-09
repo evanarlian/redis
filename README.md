@@ -33,3 +33,10 @@ Note: This section is for stages 2 and beyond.
    slow the first time you run it. Subsequent runs will be fast.
 1. Commit your changes and run `git push origin master` to submit your solution
    to CodeCrafters. Test output will be streamed to your terminal.
+
+# Features
+* todo
+
+# Flaws
+* one connection is mapped to one thread, thus cannot handle a lot of connection
+* RwLock is kinda pointless, since seemingly read-only operations such as GET can be a write operation too because of passive key eviction.
