@@ -135,7 +135,7 @@ impl RedisServer {
         // read file
         let filepath = args.dir.join(args.dbfilename.clone());
         let parsed_rdb = match fs::read(filepath) {
-            Ok(rdb_bytes) => rdb::parse_rdb(rdb_bytes),
+            Ok(rdb_bytes) => rdb::parse_rdb(&rdb_bytes),
             Err(e) => {
                 eprintln!("skipping restoration from rdb: {e}");
                 RdbParseResult::default()
@@ -143,7 +143,7 @@ impl RedisServer {
         };
         // populate the database
         let mut random_map = RandomMap::new();
-        for (k, v) in parsed_rdb.redis_map.into_iter() {
+        for (k, v) in parsed_rdb.kv_map.into_iter() {
             random_map.set(k, v);
         }
         Arc::new(RwLock::new(random_map))
