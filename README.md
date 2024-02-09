@@ -40,3 +40,4 @@ Note: This section is for stages 2 and beyond.
 # Flaws
 * one connection is mapped to one thread, thus cannot handle a lot of connection
 * RwLock is kinda pointless, since seemingly read-only operations such as GET can be a write operation too because of passive key eviction.
+* RDB reader is not implemented completely.
