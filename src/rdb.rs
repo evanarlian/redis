@@ -139,12 +139,12 @@ fn length_decode(buf: &mut ByteWrapper) -> DecodedLength {
                 1 => {
                     // 16 bit int follow
                     let buf_u16: [u8; 2] = buf.get(2).try_into().unwrap();
-                    u16::from_be_bytes(buf_u16) as usize
+                    u16::from_le_bytes(buf_u16) as usize
                 }
                 2 => {
                     // 32 bit int follow
                     let buf_u32: [u8; 4] = buf.get(4).try_into().unwrap();
-                    u32::from_be_bytes(buf_u32) as usize
+                    u32::from_le_bytes(buf_u32) as usize
                 }
                 _ => {
                     panic!("rdb file is not valid, length decode fail")
@@ -200,7 +200,7 @@ fn parse_resizedb_and_keyvals(buf: &mut ByteWrapper, kv_map: &mut HashMap<String
                 buf.one();
                 // expiry in millisecs
                 let temp: [u8; 8] = buf.get(8).try_into().unwrap();
-                let unix_millis = u64::from_be_bytes(temp);
+                let unix_millis = u64::from_le_bytes(temp);
                 let expiry = UNIX_EPOCH + Duration::from_millis(unix_millis);
                 Some(expiry)
             }
@@ -208,7 +208,7 @@ fn parse_resizedb_and_keyvals(buf: &mut ByteWrapper, kv_map: &mut HashMap<String
                 buf.one();
                 // expiry in secs
                 let temp = buf.get(4).try_into().unwrap();
-                let unix_secs = u32::from_be_bytes(temp);
+                let unix_secs = u32::from_le_bytes(temp);
                 let expiry = UNIX_EPOCH + Duration::from_secs(unix_secs as u64);
                 Some(expiry)
             }
