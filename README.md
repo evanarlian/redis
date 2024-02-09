@@ -34,8 +34,6 @@ Note: This section is for stages 2 and beyond.
 1. Commit your changes and run `git push origin master` to submit your solution
    to CodeCrafters. Test output will be streamed to your terminal.
 
-# Features
-* todo
 
 # Flaws
 * One connection is mapped to one thread, thus cannot handle massive number of connections.
